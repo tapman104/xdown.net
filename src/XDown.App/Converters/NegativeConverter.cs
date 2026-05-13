@@ -1,0 +1,22 @@
+using Avalonia.Data.Converters;
+using System;
+using System.Globalization;
+
+namespace XDown.App.Converters;
+
+public class NegativeConverter : IValueConverter
+{
+    public static readonly NegativeConverter Instance = new();
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is double d)
+            return d < 0;
+        return false;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotSupportedException();
+    }
+}

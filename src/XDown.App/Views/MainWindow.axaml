@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:XDown.App.ViewModels"
+        xmlns:conv="using:XDown.App.Converters"
+        x:Class="XDown.App.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        x:CompileBindings="True"
+        Title="xdown" Width="520" Height="280"
+        CanResize="False">
+
+  <StackPanel Margin="24" Spacing="12">
+
+    <!-- URL input -->
+    <TextBlock Text="URL" Classes="label"/>
+    <TextBox Text="{Binding Url}"
+             Watermark="https://example.com/file.zip"
+             IsEnabled="{Binding !IsDownloading}"/>
+
+    <!-- Output path -->
+    <TextBlock Text="Save as" Classes="label"/>
+    <TextBox Text="{Binding OutputPath}"
+             IsEnabled="{Binding !IsDownloading}"/>
+
+    <!-- Progress bar -->
+    <ProgressBar Minimum="0" Maximum="100"
+                 Value="{Binding ProgressPercent}"
+                 IsIndeterminate="{Binding ProgressPercent, 
+                     Converter={x:Static conv:NegativeConverter.Instance}}"/>
+
+    <!-- Status row -->
+    <Grid ColumnDefinitions="*,Auto,Auto">
+      <TextBlock Text="{Binding StatusText}" Grid.Column="0"/>
+      <TextBlock Text="{Binding SpeedText}" Grid.Column="1" Margin="8,0"/>
+      <TextBlock Text="{Binding EtaText}"   Grid.Column="2"/>
+    </Grid>
+
+    <!-- Buttons -->
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+      <Button Content="Download"
+              Command="{Binding StartCommand}"/>
+      <Button Content="Cancel"
+              Command="{Binding CancelCommand}"
+              IsEnabled="{Binding IsDownloading}"/>
+    </StackPanel>
+
+  </StackPanel>
+</Window>

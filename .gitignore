@@ -1,0 +1,29 @@
+# .NET Core / Visual Studio
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Pp]ublish/
+
+# Visual Studio files
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# Rider / JetBrains
+.idea/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# XDown specific temp files
+*.part*
+*.xdown
+
+# User-specific settings or secrets (if any)
+appsettings.local.json
