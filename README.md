@@ -24,19 +24,19 @@ XDown is a cross-platform desktop download manager built with Avalonia and .NET.
 ## Build
 
 ```bash
-dotnet build /home/runner/work/xdown.net/xdown.net/xdown.sln
+dotnet build xdown.sln
 ```
 
 ## Run
 
 ```bash
-dotnet run --project /home/runner/work/xdown.net/xdown.net/src/XDown.App/XDown.App.csproj
+dotnet run --project src/XDown.App/XDown.App.csproj
 ```
 
 ## Test
 
 ```bash
-dotnet test /home/runner/work/xdown.net/xdown.net/xdown.sln
+dotnet test xdown.sln
 ```
 
 ## Current UI
