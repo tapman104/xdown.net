@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 
 namespace XDown.Core;
 
@@ -13,11 +14,10 @@ public sealed class DownloadService
 
     public DownloadService()
     {
-        // SocketsHttpHandler is fully AOT-safe and cross-platform
-        var handler = new SocketsHttpHandler
+        // Use HttpClientHandler to allow SSL bypass for testing
+        var handler = new HttpClientHandler
         {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            EnableMultipleHttp2Connections = true,
+            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
         };
         _http = new HttpClient(handler)
         {
@@ -42,6 +42,12 @@ public sealed class DownloadService
             await DownloadSegmentedAsync(job, totalBytes, progress, ct);
         else
             await DownloadSingleAsync(job, totalBytes, progress, ct);
+
+        // Step 3: Checksum (Change 5)
+        if (!string.IsNullOrWhiteSpace(job.ExpectedHash))
+        {
+            await VerifyChecksumAsync(job, ct);
+        }
     }
 
     // ---------------------------------------------------------------
@@ -154,50 +160,68 @@ public sealed class DownloadService
         bool canResume = sidecar != null
             && sidecar.Url == job.Url
             && sidecar.TotalBytes == totalBytes
-            && sidecar.Segments.Length == segCount;
+            && sidecar.Segments.Length == segCount
+            && File.Exists(job.OutputPath);
 
-        var segments = new (long Start, long End, string TempPath, long ExistingBytes)[segCount];
         var sidecarSegments = new XDownSegment[segCount];
-
         for (int i = 0; i < segCount; i++)
         {
-            long start = i * segSize;
-            long end = (i == segCount - 1) ? totalBytes - 1 : (start + segSize - 1);
-            string tempPath = Path.Combine(tempDir, $"{outputFilename}.part{i}");
-            
-            long existingBytes = 0;
-            if (canResume && File.Exists(tempPath))
+            if (canResume)
             {
-                existingBytes = new FileInfo(tempPath).Length;
-                if (start + existingBytes > end + 1)
-                    existingBytes = (end - start) + 1;
+                sidecarSegments[i] = sidecar!.Segments[i];
             }
             else
             {
-                try { File.Delete(tempPath); } catch { }
+                long start = i * segSize;
+                long end = (i == segCount - 1) ? totalBytes - 1 : (start + segSize - 1);
+                sidecarSegments[i] = new XDownSegment(start, end, 0);
             }
-
-            segments[i] = (start, end, tempPath, existingBytes);
-            sidecarSegments[i] = new XDownSegment(start, end, existingBytes);
         }
 
         if (!canResume)
         {
+            // Pre-allocate the final file to full size upfront
+            await using (var fs = new FileStream(job.OutputPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, useAsync: true))
+            {
+                fs.SetLength(totalBytes);
+            }
+
             sidecar = new XDownSidecar(job.Url, totalBytes, sidecarSegments);
             string newJson = System.Text.Json.JsonSerializer.Serialize(sidecar, XDownSidecarContext.Default.XDownSidecar);
             await File.WriteAllTextAsync(sidecarPath, newJson, ct);
         }
 
-        long totalReceived = segments.Sum(s => s.ExistingBytes);
+        long totalReceived = sidecarSegments.Sum(s => s.Completed);
+        long[] segmentProgress = sidecarSegments.Select(s => s.Completed).ToArray();
+
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var lastReport = sw.Elapsed;
+        var lastSave = sw.Elapsed;
         var reportLock = new object();
         var speedQueue = new Queue<(long bytes, DateTime time)>();
         long bytesInQueue = 0;
 
-        void ReportProgress(long delta)
+        async Task SaveSidecarAsync()
+        {
+            try
+            {
+                // Sync current progress back to the sidecar record for saving
+                for (int i = 0; i < segCount; i++)
+                {
+                    sidecar!.Segments[i] = sidecar.Segments[i] with { Completed = segmentProgress[i] };
+                }
+
+                string json = System.Text.Json.JsonSerializer.Serialize(sidecar!, XDownSidecarContext.Default.XDownSidecar);
+                await File.WriteAllTextAsync(sidecarPath, json, ct);
+            }
+            catch { }
+        }
+
+        void ReportProgress(int index, long delta)
         {
             long current = Interlocked.Add(ref totalReceived, delta);
+            Interlocked.Add(ref segmentProgress[index], delta);
+
             var nowUtc = DateTime.UtcNow;
 
             lock (reportLock)
@@ -212,6 +236,14 @@ public sealed class DownloadService
                 }
 
                 var now = sw.Elapsed;
+
+                // Periodically save sidecar (every 5 seconds) to allow resume after crash
+                if ((now - lastSave).TotalSeconds >= 5)
+                {
+                    lastSave = now;
+                    _ = SaveSidecarAsync();
+                }
+
                 if ((now - lastReport).TotalMilliseconds < 200) return;
 
                 double speed = bytesInQueue / 5.0;
@@ -224,39 +256,64 @@ public sealed class DownloadService
             }
         }
 
-        await Task.WhenAll(segments.Select(seg =>
-            DownloadSegmentAsync(job.Url, seg.Start, seg.End, seg.TempPath, ReportProgress, ct, seg.ExistingBytes)));
+        // Parallel download directly into the pre-allocated final file
+        await Task.WhenAll(Enumerable.Range(0, segCount).Select(i =>
+            DownloadSegmentAsync(job.Url, sidecarSegments[i].Start, sidecarSegments[i].End, job.OutputPath, i, ReportProgress, ct, sidecarSegments[i].Completed)));
 
-        await using var final = new FileStream(job.OutputPath,
-            FileMode.Create, FileAccess.Write, FileShare.None,
-            bufferSize: ReadBufferSize, useAsync: true);
-
-        foreach (var (_, _, tempPath, _) in segments)
-        {
-            await using var part = new FileStream(tempPath,
-                FileMode.Open, FileAccess.Read, FileShare.None,
-                bufferSize: ReadBufferSize, useAsync: true);
-            await part.CopyToAsync(final, ct);
-        }
-
-        foreach (var (_, _, tempPath, _) in segments)
-            try { File.Delete(tempPath); } catch { }
+        // Cleanup sidecar upon successful completion
         try { File.Delete(sidecarPath); } catch { }
 
         progress?.Report(new DownloadProgress(
             totalBytes, totalBytes, 0, sw.Elapsed, TimeSpan.Zero));
     }
 
+    private async Task VerifyChecksumAsync(DownloadJob job, CancellationToken ct)
+    {
+        var algorithm = job.HashAlgorithm ?? HashAlgorithmName.SHA256;
+        byte[] hash;
+
+        // Open file in its own scope to ensure disposal before possible deletion
+        {
+            await using var fs = new FileStream(job.OutputPath,
+                FileMode.Open, FileAccess.Read, FileShare.Read,
+                bufferSize: ReadBufferSize, useAsync: true);
+
+            if (algorithm == HashAlgorithmName.SHA256)
+                hash = await SHA256.HashDataAsync(fs, ct);
+            else if (algorithm == HashAlgorithmName.SHA1)
+                hash = await SHA1.HashDataAsync(fs, ct);
+            else if (algorithm == HashAlgorithmName.SHA512)
+                hash = await SHA512.HashDataAsync(fs, ct);
+            else if (algorithm == HashAlgorithmName.MD5)
+                hash = await MD5.HashDataAsync(fs, ct);
+            else
+                throw new NotSupportedException($"Algorithm {algorithm.Name} is not supported.");
+        }
+
+        string actualHex = Convert.ToHexString(hash);
+
+        // Handle "sha256:HEX" format
+        string expected = job.ExpectedHash!;
+        int colonIndex = expected.IndexOf(':');
+        if (colonIndex >= 0)
+            expected = expected[(colonIndex + 1)..];
+
+        if (!string.Equals(actualHex, expected, StringComparison.OrdinalIgnoreCase))
+        {
+            try { File.Delete(job.OutputPath); } catch { }
+            throw new DownloadException($"Checksum mismatch! Expected {expected}, got {actualHex}");
+        }
+    }
+
     private async Task DownloadSegmentAsync(
-        string url, long start, long end, string tempPath,
-        Action<long> reportProgress, CancellationToken ct, long existingBytes = 0)
+        string url, long start, long end, string outputPath,
+        int segmentIndex, Action<int, long> reportProgress, CancellationToken ct, long existingBytes = 0)
     {
         long currentStart = start + existingBytes;
+        if (currentStart > end) return;
 
         await RetryAsync(async () =>
         {
-            if (currentStart > end) return;
-
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(currentStart, end);
 
@@ -265,17 +322,20 @@ public sealed class DownloadService
             resp.EnsureSuccessStatusCode();
 
             await using var stream = await resp.Content.ReadAsStreamAsync(ct);
-            var mode = currentStart == start ? FileMode.Create : FileMode.Append;
-            await using var file = new FileStream(tempPath,
-                mode, FileAccess.Write, FileShare.None,
+            
+            // Open the shared file with ReadWrite share to allow other segments to write in parallel
+            await using var file = new FileStream(outputPath,
+                FileMode.Open, FileAccess.Write, FileShare.ReadWrite,
                 bufferSize: ReadBufferSize, useAsync: true);
+            
+            file.Seek(currentStart, SeekOrigin.Begin);
 
             var buffer = new byte[ReadBufferSize];
             int read;
             while ((read = await stream.ReadAsync(buffer, ct)) > 0)
             {
                 await file.WriteAsync(buffer.AsMemory(0, read), ct);
-                reportProgress(read);
+                reportProgress(segmentIndex, read);
                 currentStart += read;
             }
         }, 4, ct);

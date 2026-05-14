@@ -1,31 +1,38 @@
-Change 4 — Direct-Write, No Merge Step (touches only DownloadService.cs)
-Instead of writing .partN files and merging:
+Add a new XDown.Cli project to the solution.
 
-Pre-allocate the final file to full size upfront (FileStream.SetLength(totalBytes))
-Each segment opens the same file with FileShare.Write and seeks to its offset
-Segments write directly in parallel — no merge phase at all
-On resume (Change 3), check bytes already written at each offset instead of checking part files
+1. Create the project:
+dotnet new console -n XDown.Cli -f net8.0 -o src/XDown.Cli
+dotnet sln add src/XDown.Cli/XDown.Cli.csproj
+2. XDown.Cli.csproj requirements:
 
-Prerequisite: Do Change 3 first so the sidecar logic is already there
+SelfContained, PublishAot, PublishSingleFile — same flags as XDown.App
+ProjectReference to XDown.Core
+No Avalonia, no third-party packages
 
-Change 5 — Optional Checksum (touches DownloadJob + DownloadService)
-Step 5a — DownloadJob.cs
-Add:
-string? ExpectedHash     // e.g. "sha256:abc123..."
-HashAlgorithmName HashAlgorithm  // default SHA256
-Step 5b — DownloadService.cs
+1. Program.cs — manual arg parsing, no libraries:
+Arguments:
 
-After merge/direct-write completes, if ExpectedHash != null:
+--url (required)
+--output (optional, derive from URL via UrlHelper.DeriveFilename if omitted)
+--segments (optional int, default 4)
+--hash (optional, e.g. sha256:abc123)
+--temp-dir (optional)
+--no-progress (flag)
 
-Stream the final file through SHA256.HashData()
-Compare hex strings
-Throw DownloadException("Checksum mismatch") if wrong
-Delete the corrupt file automatically
+Progress output:
 
-The Order Matters
-1 → standalone, do anytime done
-2 → standalone, do anytime done
-3a → before 3b done
-3b → before 4 (4 replaces the merge but reuses the sidecar) pending
-4 → after 3pending
-5 → after 4 pending
+Overwrite same line with \r
+Format: [=====>    ] 45% | 2.1 MB/s | ETA 00:32
+If --no-progress: silent until done
+
+Exit codes:
+
+0 = success
+1 = download failed
+2 = checksum mismatch
+3 = bad arguments
+
+Errors go to stderr. Final success line goes to stdout:
+Done. Saved to <path> (<size> in <time>)
+4. AOT rules from gemini.md apply — no reflection, no dynamic, ConfigureAwait(false) in Core calls.
+5. Build and verify: dotnet build
