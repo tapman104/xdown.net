@@ -11,7 +11,7 @@
 | Thing | Version |
 | --- | --- |
 | C# | 13 |
-| .NET | 9 |
+| .NET | 8 |
 | Runtime mode | Native AOT (published), JIT (debug/dev) |
 | Nullable | Enabled everywhere |
 | Implicit usings | Enabled |
@@ -409,8 +409,11 @@ Name temp files deterministically: `{outputFilename}.part{index}`. Use a `.xdown
 ## 7. Project Dependency Rules
 
 ```text
-XDown.Core   →  no dependencies on XDown.App, Avalonia, or any UI
-XDown.App    →  depends on XDown.Core + Avalonia + CommunityToolkit.Mvvm
+XDown.Core       →  no dependencies on UI (portable)
+XDown.App        →  depends on XDown.Core + Avalonia + CommunityToolkit.Mvvm
+XDown.Cli        →  depends on XDown.Core (Native AOT console)
+XDown.Tests      →  depends on XDown.Core (xUnit, JIT only)
+XDown.Benchmarks →  depends on XDown.Core (BenchmarkDotNet, JIT/Release)
 ```
 
 If you find yourself writing `using Avalonia` in a `XDown.Core` file, stop — it's wrong. Move the code to `XDown.App`.
@@ -460,6 +463,16 @@ var handler = new HttpClientHandler();
 | `log4net` / `NLog` | Heavy, use `Microsoft.Extensions.Logging` abstraction only if needed |
 | `RestSharp` | Wraps HttpClient with extra reflection overhead |
 | `Avalonia.ReactiveUI` | ReactiveUI adds complexity and AOT friction; CommunityToolkit is sufficient |
+
+---
+
+## 10. Testing & Benchmarking Rules
+
+### 10.1 No Mocks for Network
+Use real HTTP endpoints (e.g., httpbin.org, speed.cloudflare.com) for integration tests in `XDown.Tests`. This ensures the full network stack is exercised.
+
+### 10.2 Benchmark Consistency
+Run benchmarks in `Release` configuration. Use `SimpleJob(RunStrategy.ColdStart)` when benchmarking network-bound operations to avoid server-side rate limiting or caching effects.
 
 ---
 
