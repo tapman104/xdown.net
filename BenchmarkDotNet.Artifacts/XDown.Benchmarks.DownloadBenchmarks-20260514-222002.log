@@ -1,0 +1,205 @@
+// Validating benchmarks:
+// ***** BenchmarkRunner: Start   *****
+// ***** Found 3 benchmark(s) in total *****
+// ***** Building 1 exe(s) in Parallel: Start   *****
+// start dotnet  restore --nodeReuse:false /p:UseSharedCompilation=false /p:Deterministic=true /p:Optimize=true /p:ArtifactsPath="C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1/" /p:OutDir="C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1\bin\Release\net8.0/" /p:OutputPath="C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1\bin\Release\net8.0/" /p:PublishDir="C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1\publish/" in C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1
+// command took 2.12 sec and exited with 0
+// start dotnet  build -c Release --no-restore --nodeReuse:false /p:UseSharedCompilation=false /p:Deterministic=true /p:Optimize=true /p:ArtifactsPath="C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1/" /p:OutDir="C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1\bin\Release\net8.0/" /p:OutputPath="C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1\bin\Release\net8.0/" /p:PublishDir="C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1\publish/" --output "C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1\bin\Release\net8.0/" in C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1
+// command took 11.88 sec and exited with 0
+// ***** Done, took 00:00:14 (14.14 sec)   *****
+// Found 3 benchmarks:
+//   DownloadBenchmarks.Download10MB: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart) [Segments=1]
+//   DownloadBenchmarks.Download10MB: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart) [Segments=4]
+//   DownloadBenchmarks.Download10MB: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart) [Segments=8]
+
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: DownloadBenchmarks.Download10MB: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart) [Segments=1]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet XDown.Benchmarks-Job-AYUXIY-1.dll --anonymousPipes 1332 1228 --benchmarkName "XDown.Benchmarks.DownloadBenchmarks.DownloadAsync(Segments: 1)" --job "IterationCount=3, RunStrategy=ColdStart" --benchmarkId 0 in C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1\bin\Release\net8.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 8.0.23 (8.0.23, 8.0.2325.60607), X64 RyuJIT x86-64-v2
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=128
+// Job: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart)
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 2951880300.00 ns, 2.9519 s/op
+WorkloadActual   2: 1 op, 2793750000.00 ns, 2.7938 s/op
+WorkloadActual   3: 1 op, 3174575800.00 ns, 3.1746 s/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 2951880300.00 ns, 2.9519 s/op
+WorkloadResult   2: 1 op, 2793750000.00 ns, 2.7938 s/op
+WorkloadResult   3: 1 op, 3174575800.00 ns, 3.1746 s/op
+// GC:  0 0 0 504184 1
+// Threading:  1082 0 1
+
+// AfterAll
+// Benchmark Process 2324 has exited with code 0.
+
+Mean = 2.973 s, StdErr = 0.110 s (3.71%), N = 3, StdDev = 0.191 s
+Min = 2.794 s, Q1 = 2.873 s, Median = 2.952 s, Q3 = 3.063 s, Max = 3.175 s
+IQR = 0.190 s, LowerFence = 2.587 s, UpperFence = 3.349 s
+ConfidenceInterval = [-0.517 s; 6.464 s] (CI 99.9%), Margin = 3.490 s (117.39% of Mean)
+Skewness = 0.11, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 2 (66.7%) benchmark(s) to run. Estimated finish 2026-05-14 22:20 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: DownloadBenchmarks.Download10MB: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart) [Segments=4]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet XDown.Benchmarks-Job-AYUXIY-1.dll --anonymousPipes 1372 1324 --benchmarkName "XDown.Benchmarks.DownloadBenchmarks.DownloadAsync(Segments: 4)" --job "IterationCount=3, RunStrategy=ColdStart" --benchmarkId 1 in C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1\bin\Release\net8.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 8.0.23 (8.0.23, 8.0.2325.60607), X64 RyuJIT x86-64-v2
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=128
+// Job: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart)
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 2871358600.00 ns, 2.8714 s/op
+WorkloadActual   2: 1 op, 2962721800.00 ns, 2.9627 s/op
+WorkloadActual   3: 1 op, 2845516000.00 ns, 2.8455 s/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 2871358600.00 ns, 2.8714 s/op
+WorkloadResult   2: 1 op, 2962721800.00 ns, 2.9627 s/op
+WorkloadResult   3: 1 op, 2845516000.00 ns, 2.8455 s/op
+// GC:  1 1 0 535096 1
+// Threading:  1181 0 1
+
+// AfterAll
+// Benchmark Process 9140 has exited with code 0.
+
+Mean = 2.893 s, StdErr = 0.036 s (1.23%), N = 3, StdDev = 0.062 s
+Min = 2.846 s, Q1 = 2.858 s, Median = 2.871 s, Q3 = 2.917 s, Max = 2.963 s
+IQR = 0.059 s, LowerFence = 2.771 s, UpperFence = 3.005 s
+ConfidenceInterval = [1.770 s; 4.017 s] (CI 99.9%), Margin = 1.123 s (38.83% of Mean)
+Skewness = 0.31, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 1 (33.3%) benchmark(s) to run. Estimated finish 2026-05-14 22:20 (0h 0m from now) **
+Setup power plan (GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c FriendlyName: High performance)
+// **************************
+// Benchmark: DownloadBenchmarks.Download10MB: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart) [Segments=8]
+// *** Execute ***
+// Launch: 1 / 1
+// Execute: dotnet XDown.Benchmarks-Job-AYUXIY-1.dll --anonymousPipes 1320 1356 --benchmarkName "XDown.Benchmarks.DownloadBenchmarks.DownloadAsync(Segments: 8)" --job "IterationCount=3, RunStrategy=ColdStart" --benchmarkId 2 in C:\Users\tapman\Desktop\xdown.net\src\XDown.Benchmarks\bin\Release\net8.0\XDown.Benchmarks-Job-AYUXIY-1\bin\Release\net8.0
+// BeforeAnythingElse
+
+// Benchmark Process Environment Information:
+// BenchmarkDotNet v0.15.8
+// Runtime=.NET 8.0.23 (8.0.23, 8.0.2325.60607), X64 RyuJIT x86-64-v2
+// GC=Concurrent Workstation
+// HardwareIntrinsics=AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL VectorSize=128
+// Job: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart)
+
+// BeforeActualRun
+WorkloadActual   1: 1 op, 3128949500.00 ns, 3.1289 s/op
+WorkloadActual   2: 1 op, 3295437700.00 ns, 3.2954 s/op
+WorkloadActual   3: 1 op, 3238323900.00 ns, 3.2383 s/op
+
+// AfterActualRun
+WorkloadResult   1: 1 op, 3128949500.00 ns, 3.1289 s/op
+WorkloadResult   2: 1 op, 3295437700.00 ns, 3.2954 s/op
+WorkloadResult   3: 1 op, 3238323900.00 ns, 3.2383 s/op
+// GC:  1 1 0 717984 1
+// Threading:  1771 0 1
+
+// AfterAll
+// Benchmark Process 4804 has exited with code 0.
+
+Mean = 3.221 s, StdErr = 0.049 s (1.52%), N = 3, StdDev = 0.085 s
+Min = 3.129 s, Q1 = 3.184 s, Median = 3.238 s, Q3 = 3.267 s, Max = 3.295 s
+IQR = 0.083 s, LowerFence = 3.059 s, UpperFence = 3.392 s
+ConfidenceInterval = [1.677 s; 4.764 s] (CI 99.9%), Margin = 1.543 s (47.92% of Mean)
+Skewness = -0.2, Kurtosis = 0.67, MValue = 2
+
+// ** Remained 0 (0.0%) benchmark(s) to run. Estimated finish 2026-05-14 22:20 (0h 0m from now) **
+Successfully reverted power plan (GUID: 381b4222-f694-41f0-9685-ff5bb260df2e FriendlyName: Balanced)
+// ***** BenchmarkRunner: Finish  *****
+
+// * Export *
+  BenchmarkDotNet.Artifacts\results\XDown.Benchmarks.DownloadBenchmarks-report.csv
+  BenchmarkDotNet.Artifacts\results\XDown.Benchmarks.DownloadBenchmarks-report-github.md
+  BenchmarkDotNet.Artifacts\results\XDown.Benchmarks.DownloadBenchmarks-report.html
+
+// * Detailed results *
+DownloadBenchmarks.Download10MB: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart) [Segments=1]
+Runtime = .NET 8.0.23 (8.0.23, 8.0.2325.60607), X64 RyuJIT x86-64-v2; GC = Concurrent Workstation
+Mean = 2.973 s, StdErr = 0.110 s (3.71%), N = 3, StdDev = 0.191 s
+Min = 2.794 s, Q1 = 2.873 s, Median = 2.952 s, Q3 = 3.063 s, Max = 3.175 s
+IQR = 0.190 s, LowerFence = 2.587 s, UpperFence = 3.349 s
+ConfidenceInterval = [-0.517 s; 6.464 s] (CI 99.9%), Margin = 3.490 s (117.39% of Mean)
+Skewness = 0.11, Kurtosis = 0.67, MValue = 2
+-------------------- Histogram --------------------
+[2.699 s ; 3.047 s) | @@
+[3.047 s ; 3.349 s) | @
+---------------------------------------------------
+
+DownloadBenchmarks.Download10MB: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart) [Segments=4]
+Runtime = .NET 8.0.23 (8.0.23, 8.0.2325.60607), X64 RyuJIT x86-64-v2; GC = Concurrent Workstation
+Mean = 2.893 s, StdErr = 0.036 s (1.23%), N = 3, StdDev = 0.062 s
+Min = 2.846 s, Q1 = 2.858 s, Median = 2.871 s, Q3 = 2.917 s, Max = 2.963 s
+IQR = 0.059 s, LowerFence = 2.771 s, UpperFence = 3.005 s
+ConfidenceInterval = [1.770 s; 4.017 s] (CI 99.9%), Margin = 1.123 s (38.83% of Mean)
+Skewness = 0.31, Kurtosis = 0.67, MValue = 2
+-------------------- Histogram --------------------
+[2.802 s ; 2.914 s) | @@
+[2.914 s ; 3.019 s) | @
+---------------------------------------------------
+
+DownloadBenchmarks.Download10MB: Job-AYUXIY(IterationCount=3, RunStrategy=ColdStart) [Segments=8]
+Runtime = .NET 8.0.23 (8.0.23, 8.0.2325.60607), X64 RyuJIT x86-64-v2; GC = Concurrent Workstation
+Mean = 3.221 s, StdErr = 0.049 s (1.52%), N = 3, StdDev = 0.085 s
+Min = 3.129 s, Q1 = 3.184 s, Median = 3.238 s, Q3 = 3.267 s, Max = 3.295 s
+IQR = 0.083 s, LowerFence = 3.059 s, UpperFence = 3.392 s
+ConfidenceInterval = [1.677 s; 4.764 s] (CI 99.9%), Margin = 1.543 s (47.92% of Mean)
+Skewness = -0.2, Kurtosis = 0.67, MValue = 2
+-------------------- Histogram --------------------
+[3.052 s ; 3.190 s) | @
+[3.190 s ; 3.372 s) | @@
+---------------------------------------------------
+
+// * Summary *
+
+BenchmarkDotNet v0.15.8, Windows 10 (10.0.19045.6466/22H2/2022Update)
+Intel Core i5-3470 CPU 3.20GHz (Ivy Bridge), 1 CPU, 4 logical and 4 physical cores
+.NET SDK 8.0.417
+  [Host]     : .NET 8.0.23 (8.0.23, 8.0.2325.60607), X64 RyuJIT x86-64-v2
+  Job-AYUXIY : .NET 8.0.23 (8.0.23, 8.0.2325.60607), X64 RyuJIT x86-64-v2
+
+IterationCount=3  RunStrategy=ColdStart  
+
+| Method       | Segments | Mean    | Error   | StdDev   | Gen0      | Gen1      | Allocated |
+|------------- |--------- |--------:|--------:|---------:|----------:|----------:|----------:|
+| Download10MB | 1        | 2.973 s | 3.490 s | 0.1913 s |         - |         - | 492.37 KB |
+| Download10MB | 4        | 2.893 s | 1.123 s | 0.0616 s | 1000.0000 | 1000.0000 | 522.55 KB |
+| Download10MB | 8        | 3.221 s | 1.543 s | 0.0846 s | 1000.0000 | 1000.0000 | 701.16 KB |
+
+// * Legends *
+  Segments  : Value of the 'Segments' parameter
+  Mean      : Arithmetic mean of all measurements
+  Error     : Half of 99.9% confidence interval
+  StdDev    : Standard deviation of all measurements
+  Gen0      : GC Generation 0 collects per 1000 operations
+  Gen1      : GC Generation 1 collects per 1000 operations
+  Allocated : Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)
+  1 s       : 1 Second (1 sec)
+
+// * Diagnostic Output - MemoryDiagnoser *
+
+
+// ***** BenchmarkRunner: End *****
+Run time: 00:00:38 (38.25 sec), executed benchmarks: 3
+
+Global total time: 00:00:53 (53.89 sec), executed benchmarks: 3
+// * Artifacts cleanup *
+Artifacts cleanup is finished

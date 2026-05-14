@@ -1,38 +1,32 @@
-Add a new XDown.Cli project to the solution.
+Add XDown.Tests and XDown.Benchmarks projects to the solution.
+Step 1 — XDown.Tests
+dotnet new xunit -n XDown.Tests -f net8.0 -o src/XDown.Tests
+dotnet sln add src/XDown.Tests/XDown.Tests.csproj
+ProjectReference to XDown.Core only. No extra packages beyond the xunit template defaults.
+Write these test files:
+UrlHelperTests.cs — test DeriveFilename with: valid URL, URL with query string, trailing slash, garbage string, null/empty. All should return correct name or download.bin.
+DownloadJobTests.cs — verify defaults: MaxSegments=4, TempDirectory=null, HashAlgorithm=null.
+DownloadProgressTests.cs — record equality, ETA null when TotalBytes=-1, SpeedBytesPerSec=0 on final report.
+DownloadServiceIntegrationTests.cs — real HTTP, no mocks:
 
-1. Create the project:
-dotnet new console -n XDown.Cli -f net8.0 -o src/XDown.Cli
-dotnet sln add src/XDown.Cli/XDown.Cli.csproj
-2. XDown.Cli.csproj requirements:
+Single-stream: <http://httpbin.org/bytes/1048576>
+Segmented: <http://speed.cloudflare.com/__down?bytes=5242880>
+Cancel mid-download: cts.Cancel() after 500ms, assert OperationCanceledException
+Checksum pass: correct SHA256 on a known file
+Checksum fail: wrong hash → assert DownloadException thrown + file deleted
 
-SelfContained, PublishAot, PublishSingleFile — same flags as XDown.App
-ProjectReference to XDown.Core
-No Avalonia, no third-party packages
+Run dotnet test — all must pass before proceeding.
 
-1. Program.cs — manual arg parsing, no libraries:
-Arguments:
+Step 2 — XDown.Benchmarks
+dotnet new console -n XDown.Benchmarks -f net8.0 -o src/XDown.Benchmarks
+dotnet sln add src/XDown.Benchmarks/XDown.Benchmarks.csproj
+Add package: BenchmarkDotNet. ProjectReference to XDown.Core only.
+Write DownloadBenchmarks.cs:
 
---url (required)
---output (optional, derive from URL via UrlHelper.DeriveFilename if omitted)
---segments (optional int, default 4)
---hash (optional, e.g. sha256:abc123)
---temp-dir (optional)
---no-progress (flag)
+SingleStreamDownload — 10MB, 1 segment
+SegmentedDownload — 10MB, [Params(1, 4, 8)] segments
+Measure throughput MB/s across all param values
 
-Progress output:
+Run: dotnet run -c Release --project src/XDown.Benchmarks
 
-Overwrite same line with \r
-Format: [=====>    ] 45% | 2.1 MB/s | ETA 00:32
-If --no-progress: silent until done
-
-Exit codes:
-
-0 = success
-1 = download failed
-2 = checksum mismatch
-3 = bad arguments
-
-Errors go to stderr. Final success line goes to stdout:
-Done. Saved to <path> (<size> in <time>)
-4. AOT rules from gemini.md apply — no reflection, no dynamic, ConfigureAwait(false) in Core calls.
-5. Build and verify: dotnet build
+AOT rules from gemini.md still apply to XDown.Core. Tests run under JIT — that's fine and expected. Do not write mocks — real HTTP only.

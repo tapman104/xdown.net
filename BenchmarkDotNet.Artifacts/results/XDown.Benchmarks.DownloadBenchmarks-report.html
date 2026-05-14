@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>XDown.Benchmarks.DownloadBenchmarks-20260514-222017</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.15.8, Windows 10 (10.0.19045.6466/22H2/2022Update)
+Intel Core i5-3470 CPU 3.20GHz (Ivy Bridge), 1 CPU, 4 logical and 4 physical cores
+.NET SDK 8.0.417
+  [Host]     : .NET 8.0.23 (8.0.23, 8.0.2325.60607), X64 RyuJIT x86-64-v2
+  Job-AYUXIY : .NET 8.0.23 (8.0.23, 8.0.2325.60607), X64 RyuJIT x86-64-v2
+</code></pre>
+<pre><code>IterationCount=3  RunStrategy=ColdStart  
+</code></pre>
+
+<table>
+<thead><tr><th>Method</th><th>Segments</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>Download10MB</td><td>1</td><td>2.973 s</td><td>3.490 s</td><td>0.1913 s</td><td>-</td><td>-</td><td>492.37 KB</td>
+</tr><tr><td>Download10MB</td><td>4</td><td>2.893 s</td><td>1.123 s</td><td>0.0616 s</td><td>1000.0000</td><td>1000.0000</td><td>522.55 KB</td>
+</tr><tr><td>Download10MB</td><td>8</td><td>3.221 s</td><td>1.543 s</td><td>0.0846 s</td><td>1000.0000</td><td>1000.0000</td><td>701.16 KB</td>
+</tr></tbody></table>
+</body>
+</html>
