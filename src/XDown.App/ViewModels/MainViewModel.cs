@@ -25,6 +25,16 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _speedText = string.Empty;
     [ObservableProperty] private string _etaText = string.Empty;
     [ObservableProperty] private bool _isDownloading;
+    [ObservableProperty] private bool _resumeEnabled = true;
+    [ObservableProperty] private int _segmentCount = 4;
+
+    partial void OnSegmentCountChanged(int value)
+    {
+        if (value < 1)
+            SegmentCount = 1;
+        else if (value > 16)
+            SegmentCount = 16;
+    }
 
     // Auto-fill filename when URL changes
     partial void OnUrlChanged(string value)
@@ -67,7 +77,8 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var job = new DownloadJob(Url, OutputPath);
-            await _service.DownloadAsync(job, progress, _cts.Token);
+            var options = new DownloadOptions(MaxSegments: SegmentCount, Resume: ResumeEnabled);
+            await _service.DownloadAsync(job, options, progress, _cts.Token);
             StatusText = "Done ✓";
         }
         catch (OperationCanceledException)
