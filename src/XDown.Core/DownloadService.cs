@@ -12,13 +12,17 @@ public sealed class DownloadService
 
     private readonly HttpClient _http;
 
-    public DownloadService()
+    public DownloadService(bool allowInvalidServerCertificates = false)
     {
-        // Use HttpClientHandler to allow SSL bypass for testing
-        var handler = new HttpClientHandler
+        var handler = new SocketsHttpHandler();
+        if (allowInvalidServerCertificates)
         {
-            ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-        };
+            handler.SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+            {
+                RemoteCertificateValidationCallback = (_, _, _, _) => true
+            };
+        }
+
         _http = new HttpClient(handler)
         {
             Timeout = TimeSpan.FromSeconds(30)
@@ -31,22 +35,33 @@ public sealed class DownloadService
         IProgress<DownloadProgress>? progress,
         CancellationToken ct)
     {
+        await DownloadAsync(job, new DownloadOptions(), progress, ct);
+    }
+
+    public async Task DownloadAsync(
+        DownloadJob job,
+        DownloadOptions? options,
+        IProgress<DownloadProgress>? progress,
+        CancellationToken ct)
+    {
+        options ??= new DownloadOptions();
+
         // Step 1: probe the URL
         var (totalBytes, supportsRanges) = await ProbeAsync(job.Url, ct);
 
         bool useSegments = supportsRanges
             && totalBytes > SegmentThreshold
-            && job.MaxSegments > 1;
+            && options.MaxSegments > 1;
 
         if (useSegments)
-            await DownloadSegmentedAsync(job, totalBytes, progress, ct);
+            await DownloadSegmentedAsync(job, options, totalBytes, progress, ct);
         else
             await DownloadSingleAsync(job, totalBytes, progress, ct);
 
         // Step 3: Checksum (Change 5)
-        if (!string.IsNullOrWhiteSpace(job.ExpectedHash))
+        if (!string.IsNullOrWhiteSpace(options.ExpectedHash))
         {
-            await VerifyChecksumAsync(job, ct);
+            await VerifyChecksumAsync(job.OutputPath, options.ExpectedHash!, options.HashAlgorithm, ct);
         }
     }
 
@@ -111,7 +126,7 @@ public sealed class DownloadService
             // Report at most ~5x per second
             if ((sw.Elapsed - lastReport).TotalMilliseconds >= 200)
             {
-                double speed = bytesInQueue / 5.0;
+                double speed = CalculateSpeedBytesPerSecond(speedQueue, bytesInQueue, nowUtc);
                 TimeSpan? eta = (totalBytes > 0 && speed > 0)
                     ? TimeSpan.FromSeconds((totalBytes - received) / speed)
                     : null;
@@ -130,20 +145,21 @@ public sealed class DownloadService
 
     // ---------------------------------------------------------------
     // SEGMENTED DOWNLOAD
-    // Splits file into N equal byte ranges, downloads in parallel,
-    // merges .partN temp files into final output.
+    // Splits file into N equal byte ranges and downloads in parallel
+    // directly into a pre-allocated output file.
     // ---------------------------------------------------------------
     private async Task DownloadSegmentedAsync(
         DownloadJob job,
+        DownloadOptions options,
         long totalBytes,
         IProgress<DownloadProgress>? progress,
         CancellationToken ct)
     {
-        string tempDir = job.TempDirectory ?? Path.GetTempPath();
+        string tempDir = options.TempDirectory ?? Path.GetTempPath();
         string outputFilename = Path.GetFileName(job.OutputPath);
         string sidecarPath = Path.Combine(tempDir, $"{outputFilename}.xdown");
 
-        int segCount = job.MaxSegments;
+        int segCount = options.MaxSegments;
         long segSize = totalBytes / segCount;
 
         XDownSidecar? sidecar = null;
@@ -157,7 +173,8 @@ public sealed class DownloadService
             catch { }
         }
 
-        bool canResume = sidecar != null
+        bool canResume = options.Resume
+            && sidecar != null
             && sidecar.Url == job.Url
             && sidecar.TotalBytes == totalBytes
             && sidecar.Segments.Length == segCount
@@ -246,7 +263,7 @@ public sealed class DownloadService
 
                 if ((now - lastReport).TotalMilliseconds < 200) return;
 
-                double speed = bytesInQueue / 5.0;
+                double speed = CalculateSpeedBytesPerSecond(speedQueue, bytesInQueue, nowUtc);
                 TimeSpan? eta = speed > 0
                     ? TimeSpan.FromSeconds((totalBytes - current) / speed)
                     : null;
@@ -267,14 +284,18 @@ public sealed class DownloadService
             totalBytes, totalBytes, 0, sw.Elapsed, TimeSpan.Zero));
     }
 
-    private async Task VerifyChecksumAsync(DownloadJob job, CancellationToken ct)
+    private async Task VerifyChecksumAsync(
+        string outputPath,
+        string expectedHash,
+        HashAlgorithmName? hashAlgorithm,
+        CancellationToken ct)
     {
-        var algorithm = job.HashAlgorithm ?? HashAlgorithmName.SHA256;
+        var algorithm = hashAlgorithm ?? HashAlgorithmName.SHA256;
         byte[] hash;
 
         // Open file in its own scope to ensure disposal before possible deletion
         {
-            await using var fs = new FileStream(job.OutputPath,
+            await using var fs = new FileStream(outputPath,
                 FileMode.Open, FileAccess.Read, FileShare.Read,
                 bufferSize: ReadBufferSize, useAsync: true);
 
@@ -293,14 +314,14 @@ public sealed class DownloadService
         string actualHex = Convert.ToHexString(hash);
 
         // Handle "sha256:HEX" format
-        string expected = job.ExpectedHash!;
+        string expected = expectedHash;
         int colonIndex = expected.IndexOf(':');
         if (colonIndex >= 0)
             expected = expected[(colonIndex + 1)..];
 
         if (!string.Equals(actualHex, expected, StringComparison.OrdinalIgnoreCase))
         {
-            try { File.Delete(job.OutputPath); } catch { }
+            try { File.Delete(outputPath); } catch { }
             throw new DownloadException($"Checksum mismatch! Expected {expected}, got {actualHex}");
         }
     }
@@ -319,7 +340,8 @@ public sealed class DownloadService
 
             using var resp = await _http.SendAsync(req,
                 HttpCompletionOption.ResponseHeadersRead, ct);
-            resp.EnsureSuccessStatusCode();
+            if (resp.StatusCode != HttpStatusCode.PartialContent)
+                throw new HttpRequestException($"Server returned {resp.StatusCode} instead of 206");
 
             await using var stream = await resp.Content.ReadAsStreamAsync(ct);
             
@@ -339,6 +361,21 @@ public sealed class DownloadService
                 currentStart += read;
             }
         }, 4, ct);
+    }
+
+    private static double CalculateSpeedBytesPerSecond(
+        Queue<(long bytes, DateTime time)> speedQueue,
+        long bytesInQueue,
+        DateTime nowUtc)
+    {
+        if (bytesInQueue <= 0 || speedQueue.Count == 0)
+            return 0;
+
+        var elapsedSeconds = (nowUtc - speedQueue.Peek().time).TotalSeconds;
+        if (elapsedSeconds <= 0)
+            return 0;
+
+        return bytesInQueue / elapsedSeconds;
     }
 
     private static async Task RetryAsync(Func<Task> operation, int maxAttempts, CancellationToken ct)

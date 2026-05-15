@@ -17,14 +17,28 @@ public static class Program
         string? hash = null;
         string? tempDir = null;
         bool noProgress = false;
+        bool noResume = false;
 
         // Manual argument parsing
         for (int i = 0; i < args.Length; i++)
         {
-            switch (args[i])
+            string arg = args[i];
+
+            switch (arg)
             {
+                case "--help":
+                case "-h":
+                    return PrintHelp();
+                case "--version":
+                case "-v":
+                    return PrintVersion();
                 case "--url":
-                    if (i + 1 < args.Length) url = args[++i];
+                    if (i + 1 < args.Length)
+                    {
+                        if (!string.IsNullOrWhiteSpace(url))
+                            return BadArguments("URL specified multiple times.");
+                        url = args[++i];
+                    }
                     else return BadArguments("Missing value for --url");
                     break;
                 case "--output":
@@ -46,14 +60,24 @@ public static class Program
                 case "--no-progress":
                     noProgress = true;
                     break;
+                case "--no-resume":
+                    noResume = true;
+                    break;
                 default:
-                    return BadArguments($"Unknown argument: {args[i]}");
+                    if (arg.StartsWith("-", StringComparison.Ordinal))
+                        return BadArguments($"Unknown argument: {arg}");
+
+                    if (!string.IsNullOrWhiteSpace(url))
+                        return BadArguments("Multiple positional arguments provided. Only one URL is allowed.");
+
+                    url = arg;
+                    break;
             }
         }
 
         if (string.IsNullOrWhiteSpace(url))
         {
-            return BadArguments("Argument --url is required.");
+            return BadArguments("A URL is required (positional or --url).");
         }
 
         if (string.IsNullOrWhiteSpace(output))
@@ -73,7 +97,12 @@ public static class Program
             cts.Cancel();
         };
 
-        var job = new DownloadJob(url, output, segments, tempDir, hash);
+        var job = new DownloadJob(url, output);
+        var options = new DownloadOptions(
+            MaxSegments: segments,
+            TempDirectory: tempDir,
+            ExpectedHash: hash,
+            Resume: !noResume);
         var service = new DownloadService();
 
         IProgress<DownloadProgress>? progressReporter = null;
@@ -113,7 +142,7 @@ public static class Program
         try
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            await service.DownloadAsync(job, progressReporter, cts.Token);
+            await service.DownloadAsync(job, options, progressReporter, cts.Token);
             sw.Stop();
             
             if (!noProgress)
@@ -151,8 +180,32 @@ public static class Program
     private static int BadArguments(string message)
     {
         Console.Error.WriteLine($"Error: {message}");
-        Console.Error.WriteLine("Usage: XDown.Cli --url <url> [--output <path>] [--segments <int>] [--hash <sha256:...>] [--temp-dir <dir>] [--no-progress]");
+        Console.Error.WriteLine("Use --help to see usage.");
         return 3;
+    }
+
+    private static int PrintHelp()
+    {
+        Console.WriteLine("Usage: xdown <url> [options]");
+        Console.WriteLine("       xdown --url <url> [options]");
+        Console.WriteLine();
+        Console.WriteLine("Options:");
+        Console.WriteLine("  --output <path>       Output file path");
+        Console.WriteLine("  --segments <int>      Number of parallel segments (default: 4)");
+        Console.WriteLine("  --hash <algo:hex>     Verify checksum, e.g. sha256:ABC123...");
+        Console.WriteLine("  --temp-dir <dir>      Directory for sidecar resume metadata");
+        Console.WriteLine("  --no-resume           Ignore existing .xdown sidecar and start fresh");
+        Console.WriteLine("  --no-progress         Disable progress bar output");
+        Console.WriteLine("  --help, -h            Show this help text");
+        Console.WriteLine("  --version, -v         Show version information");
+        return 0;
+    }
+
+    private static int PrintVersion()
+    {
+        var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown";
+        Console.WriteLine($"xdown {version}");
+        return 0;
     }
 
     private static string FormatBytes(long bytes)

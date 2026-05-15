@@ -32,9 +32,10 @@ public class DownloadBenchmarks
     public async Task DownloadAsync()
     {
         string outPath = Path.Combine(_tempDir, $"bench_{Guid.NewGuid():N}.bin");
-        var job = new DownloadJob("http://speed.cloudflare.com/__down?bytes=10485760", outPath, MaxSegments: Segments, TempDirectory: _tempDir);
+        var job = new DownloadJob("http://speed.cloudflare.com/__down?bytes=10485760", outPath);
+        var options = new DownloadOptions(MaxSegments: Segments, TempDirectory: _tempDir);
         
-        await _service.DownloadAsync(job, null, CancellationToken.None);
+        await _service.DownloadAsync(job, options, null, CancellationToken.None);
         
         if (File.Exists(outPath)) File.Delete(outPath);
     }

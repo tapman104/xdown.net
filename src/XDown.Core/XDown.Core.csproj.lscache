@@ -55,6 +55,7 @@ TemporaryDependencyNodeTargetIdentifier=net8.0
 [sourceFiles]
 DownloadException.cs
 DownloadJob.cs
+DownloadOptions.cs
 DownloadProgress.cs
 DownloadService.cs
 Helpers/UrlHelper.cs
