@@ -5,10 +5,10 @@
         x:Class="XDown.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         x:CompileBindings="True"
-        Title="xdown" Width="520" Height="280"
+          Title="{ReflectionBinding WindowTitle}" Width="520" Height="400"
         CanResize="False">
 
-  <StackPanel Margin="24" Spacing="12">
+        <StackPanel Margin="24" Spacing="12">
 
     <!-- URL input -->
     <TextBlock Text="URL" Classes="label"/>
@@ -18,8 +18,16 @@
 
     <!-- Output path -->
     <TextBlock Text="Save as" Classes="label"/>
-    <TextBox Text="{Binding OutputPath}"
-             IsEnabled="{Binding !IsDownloading}"/>
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBox Grid.Column="0"
+               Text="{Binding OutputPath}"
+               IsEnabled="{Binding !IsDownloading}"/>
+      <Button Grid.Column="1"
+              Content="Browse"
+              Click="OnBrowseOutputPathClick"
+              Margin="8,0,0,0"
+              IsEnabled="{Binding !IsDownloading}"/>
+    </Grid>
 
     <!-- Progress bar -->
     <ProgressBar Minimum="0" Maximum="100"
@@ -30,12 +38,30 @@
     <!-- Status row -->
     <Grid ColumnDefinitions="*,Auto,Auto">
       <TextBlock Text="{Binding StatusText}" Grid.Column="0"/>
-      <TextBlock Text="{Binding SpeedText}" Grid.Column="1" Margin="8,0"/>
-      <TextBlock Text="{Binding EtaText}"   Grid.Column="2"/>
+      <TextBlock Text="{Binding SpeedText}"
+                 Grid.Column="1"
+                 Margin="12,0,0,0"
+                 HorizontalAlignment="Right"
+                 TextAlignment="Right"/>
+      <TextBlock Text="{Binding EtaText}"
+                 Grid.Column="2"
+                 Margin="12,0,0,0"
+                 HorizontalAlignment="Right"
+                 TextAlignment="Right"/>
     </Grid>
 
+          <Button Content="Open folder"
+              Command="{Binding OpenFolderCommand}"
+              Classes="hyperlink"
+              IsVisible="{Binding ShowOpenFolder}"
+              HorizontalAlignment="Left"
+              Padding="0"
+              MinWidth="0"
+              Background="Transparent"
+              BorderThickness="0"/>
+
     <!-- Advanced options -->
-    <Expander Header="Advanced">
+    <Expander Header="Advanced" HorizontalAlignment="Left" Width="480">
       <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="0,4,0,0">
         <CheckBox Grid.Row="0" Grid.Column="0"
                   Content="Resume"
@@ -57,14 +83,14 @@
       </Grid>
     </Expander>
 
-    <!-- Buttons -->
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Download"
-              Command="{Binding StartCommand}"/>
-      <Button Content="Cancel"
-              Command="{Binding CancelCommand}"
-              IsEnabled="{Binding IsDownloading}"/>
-    </StackPanel>
+        <!-- Buttons -->
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,8,0,0">
+          <Button Content="{Binding DownloadButtonText}"
+            Command="{Binding StartCommand}"/>
+          <Button Content="Cancel"
+            Command="{Binding CancelCommand}"
+            IsVisible="{Binding IsDownloading}"/>
+        </StackPanel>
 
   </StackPanel>
 </Window>
