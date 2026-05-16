@@ -4,6 +4,22 @@ Here's a clean changelog for XDown based on everything built this session:
 
 ## XDown Changelog
 
+### v0.1.1 — Bug Fixes & Improvements (2026-05-16)
+
+**UI (`XDown.App`)**
+- Dynamic window title updates during download progress
+- Improved "Open folder" button layout (now on separate row)
+- Fixed segments NumericUpDown to show integer values (not `4.0`)
+- Enhanced output path handling with better user experience
+
+**Core (`XDown.Core`)**
+- Improved sidecar file path handling with unique fingerprints to prevent conflicts
+- Enhanced error recovery with fallback to single-stream download when server doesn't support Range requests
+- Better exponential backoff retry logic with jitter for improved reliability
+- Added `RangeNotSupportedException` for proper error handling
+
+---
+
 ### v0.1.0 — Initial Release (2026-05-15)
 
 **Core (`XDown.Core`)**
@@ -48,6 +64,4 @@ Here's a clean changelog for XDown based on everything built this session:
 ---
 
 **Known issues (to fix in v0.2.0)**
-- Window title not updating during download
-- Segments NumericUpDown shows `4.0` instead of `4`
-- "Open folder" placement inline with status row (should be separate row)
+- None currently identified - all previous issues have been resolved in v0.1.1

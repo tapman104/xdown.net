@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Avalonia.Threading;
 using XDown.Core;
 using XDown.Core.Helpers;
+using XDown.App.Services;
 using System.IO;
 using System;
 using System.Diagnostics;
@@ -16,6 +17,8 @@ public partial class MainViewModel : ObservableObject
     private const string AppTitle = "xdown";
 
     private readonly DownloadService _service = new();
+    private readonly SettingsService _settingsService = new();
+    private readonly LogService _logService = new();
     private CancellationTokenSource? _cts;
     private bool _outputPathUserEdited;
     private bool _isUpdatingOutputPathInternally;
@@ -40,6 +43,31 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _showOpenFolder;
     [ObservableProperty] private bool _resumeEnabled = true;
     [ObservableProperty] private int _segmentCount = 4;
+
+    public MainViewModel()
+    {
+        InitializeAsync();
+    }
+
+    private async void InitializeAsync()
+    {
+        try
+        {
+            var settings = await _settingsService.LoadAsync();
+            if (!string.IsNullOrWhiteSpace(settings.LastFolder) && Directory.Exists(settings.LastFolder))
+            {
+                // Use last saved folder with auto-derived filename
+                var derivedFileName = UrlHelper.DeriveFilename(Url);
+                var lastPath = Path.Combine(settings.LastFolder, derivedFileName);
+                SetOutputPathInternal(lastPath);
+                _lastAutoDerivedOutputPath = lastPath;
+            }
+        }
+        catch
+        {
+            // If initialization fails, continue with defaults
+        }
+    }
 
     partial void OnSegmentCountChanged(int value)
     {
@@ -91,8 +119,16 @@ public partial class MainViewModel : ObservableObject
         ProgressPercent = 0;
         StatusText = "Connecting…";
 
+        var lastProgress = (long)0; // Track final progress for logging
+        var lastTotalBytes = (long)0;
+        var lastSpeedBytesPerSec = 0.0;
+
         var progress = new Progress<DownloadProgress>(p =>
         {
+            lastProgress = p.BytesReceived;
+            lastTotalBytes = p.TotalBytes;
+            lastSpeedBytesPerSec = p.SpeedBytesPerSec;
+
             // IProgress<T> callbacks come from thread pool — marshal to UI thread
             Dispatcher.UIThread.Post(() =>
             {
@@ -117,6 +153,11 @@ public partial class MainViewModel : ObservableObject
             var job = new DownloadJob(Url, OutputPath);
             var options = new DownloadOptions(MaxSegments: SegmentCount, Resume: ResumeEnabled);
             await _service.DownloadAsync(job, options, progress, _cts.Token);
+            
+            // Log successful download
+            var fileName = GetSuggestedFileName();
+            await _logService.LogDownloadSuccessAsync(fileName, Url, lastTotalBytes, lastSpeedBytesPerSec);
+            
             StatusText = "Done";
             ShowOpenFolder = true;
             CanOpenFolder = Directory.Exists(GetOutputDirectory());
@@ -132,13 +173,24 @@ public partial class MainViewModel : ObservableObject
         {
             StatusText = $"Error: {ex.Message}";
             UpdateWindowTitle();
+            // Log download failure
+            var fileName = GetSuggestedFileName();
+            await _logService.LogDownloadFailureAsync(fileName, ex.Message);
         }
         finally
         {
             IsDownloading = false;
             SpeedText = string.Empty;
             EtaText = string.Empty;
-            if (!downloadSucceeded)
+            
+            if (downloadSucceeded)
+            {
+                // Save last folder on successful download
+                var outputDir = GetOutputDirectory();
+                var settings = new AppSettings { LastFolder = outputDir };
+                await _settingsService.SaveAsync(settings);
+            }
+            else
             {
                 ShowOpenFolder = false;
                 CanOpenFolder = false;

@@ -62,6 +62,10 @@ obj/Debug/net8.0/win-x64/
  XDown.App.AssemblyInfo.cs
  XDown.App.GlobalUsings.g.cs
 Program.cs
+Services/
+ AppSettings.cs
+ LogService.cs
+ SettingsService.cs
 ViewModels/MainViewModel.cs
 Views/MainWindow.axaml.cs
 
