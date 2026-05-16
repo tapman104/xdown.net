@@ -241,7 +241,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        WindowTitle = AppTitle;
+        WindowTitle = $"{AppTitle} — {fileName}";
     }
 
     private string GetOutputDirectory()

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace XDown.Core;
 
@@ -156,8 +157,7 @@ public sealed class DownloadService
         CancellationToken ct)
     {
         string tempDir = options.TempDirectory ?? Path.GetTempPath();
-        string outputFilename = Path.GetFileName(job.OutputPath);
-        string sidecarPath = Path.Combine(tempDir, $"{outputFilename}.xdown");
+        string sidecarPath = BuildSidecarPath(tempDir, job);
 
         int segCount = options.MaxSegments;
         long segSize = totalBytes / segCount;
@@ -273,9 +273,19 @@ public sealed class DownloadService
             }
         }
 
-        // Parallel download directly into the pre-allocated final file
-        await Task.WhenAll(Enumerable.Range(0, segCount).Select(i =>
-            DownloadSegmentAsync(job.Url, sidecarSegments[i].Start, sidecarSegments[i].End, job.OutputPath, i, ReportProgress, ct, sidecarSegments[i].Completed)));
+        try
+        {
+            // Parallel download directly into the pre-allocated final file
+            await Task.WhenAll(Enumerable.Range(0, segCount).Select(i =>
+                DownloadSegmentAsync(job.Url, sidecarSegments[i].Start, sidecarSegments[i].End, job.OutputPath, i, ReportProgress, ct, sidecarSegments[i].Completed)));
+        }
+        catch (RangeNotSupportedException)
+        {
+            // Some servers ignore Range and return 200. Fall back to single stream.
+            try { File.Delete(sidecarPath); } catch { }
+            await DownloadSingleAsync(job, totalBytes, progress, ct);
+            return;
+        }
 
         // Cleanup sidecar upon successful completion
         try { File.Delete(sidecarPath); } catch { }
@@ -340,6 +350,9 @@ public sealed class DownloadService
 
             using var resp = await _http.SendAsync(req,
                 HttpCompletionOption.ResponseHeadersRead, ct);
+            if (resp.StatusCode == HttpStatusCode.OK)
+                throw new RangeNotSupportedException();
+
             if (resp.StatusCode != HttpStatusCode.PartialContent)
                 throw new HttpRequestException($"Server returned {resp.StatusCode} instead of 206");
 
@@ -394,15 +407,25 @@ public sealed class DownloadService
                 if (attempt >= maxAttempts)
                     throw;
 
-                int delaySeconds = 1 << (attempt - 1);
-                await Task.Delay(TimeSpan.FromSeconds(delaySeconds), ct);
+                long exponentialDelayMs = Math.Min(30000, (long)Math.Pow(2, attempt - 1) * 1000);
+                int jitterMs = Random.Shared.Next(0, 251);
+                await Task.Delay(TimeSpan.FromMilliseconds(exponentialDelayMs + jitterMs), ct);
             }
         }
+    }
+
+    private static string BuildSidecarPath(string tempDirectory, DownloadJob job)
+    {
+        string outputFilename = Path.GetFileName(job.OutputPath);
+        string identity = $"{job.Url}|{Path.GetFullPath(job.OutputPath)}";
+        string fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)))[..16].ToLowerInvariant();
+        return Path.Combine(tempDirectory, $"{outputFilename}.{fingerprint}.xdown");
     }
 }
 
 internal sealed record XDownSegment(long Start, long End, long Completed);
 internal sealed record XDownSidecar(string Url, long TotalBytes, XDownSegment[] Segments);
+internal sealed class RangeNotSupportedException : Exception;
 
 [System.Text.Json.Serialization.JsonSerializable(typeof(XDownSidecar))]
 internal partial class XDownSidecarContext : System.Text.Json.Serialization.JsonSerializerContext { }

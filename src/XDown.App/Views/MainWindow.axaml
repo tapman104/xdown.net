@@ -5,7 +5,7 @@
         x:Class="XDown.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         x:CompileBindings="True"
-          Title="{ReflectionBinding WindowTitle}" Width="520" Height="400"
+        Title="{Binding WindowTitle}" Width="520" Height="400"
         CanResize="False">
 
         <StackPanel Margin="24" Spacing="12">
@@ -50,15 +50,17 @@
                  TextAlignment="Right"/>
     </Grid>
 
-          <Button Content="Open folder"
+    <Grid IsVisible="{Binding ShowOpenFolder}">
+      <Button Content="Open folder"
               Command="{Binding OpenFolderCommand}"
               Classes="hyperlink"
-              IsVisible="{Binding ShowOpenFolder}"
               HorizontalAlignment="Left"
               Padding="0"
               MinWidth="0"
               Background="Transparent"
-              BorderThickness="0"/>
+              BorderThickness="0"
+              Margin="0,2,0,0"/>
+    </Grid>
 
     <!-- Advanced options -->
     <Expander Header="Advanced" HorizontalAlignment="Left" Width="480">
@@ -76,6 +78,7 @@
         <NumericUpDown Grid.Row="1" Grid.Column="1"
                        Minimum="1"
                        Maximum="16"
+                       FormatString="0"
                        Value="{Binding SegmentCount}"
                        IsEnabled="{Binding !IsDownloading}"
                        HorizontalAlignment="Left"
